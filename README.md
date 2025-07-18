@@ -1,1 +1,1 @@
-# Este repositorio tendrá los diferentes proyectos que realizo es 2025 para la placa ESP32
+# Repositorio de proyectos que realizados en 2025 para la placa ESP32
