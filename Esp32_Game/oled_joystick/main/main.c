@@ -3,85 +3,253 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/adc.h"
-#include "driver/gpio.h"
 #include "ssd1306.h"
+#include "font8x8_basic.h"
+#include "esp_log.h"
+#include "esp_random.h"
 
-#define VRX_PIN ADC1_CHANNEL_6 // GPIO34
-#define VRY_PIN ADC1_CHANNEL_7 // GPIO35
-#define SW_PIN  18              // Botón
-
-#define SCREEN_WIDTH  128
+// ---------------- CONFIG ----------------
+#define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
+// Pines del joystick (ADC1)
+#define VRX_PIN ADC1_CHANNEL_6 // GPIO34
+#define VRY_PIN ADC1_CHANNEL_7 // GPIO35
+
+// Movimiento
+#define DEADZONE_LOW 1800
+#define DEADZONE_HIGH 2200
+#define MOVE_STEP_FINE 2
+
+// ---- Plataforma ----
+#define PLATFORM_W 24
+#define PLATFORM_H 15
+#define PLATFORM_Y_PAGE 0                           // ajusta para subir o bajar la plataforma
+#define PLATFORM_X (SCREEN_WIDTH - PLATFORM_W) / 2  // Centrado horizontalmente
+#define PLATFORM_Y (SCREEN_HEIGHT - PLATFORM_H - 1) // Página de la plataforma
+
+// ---- Bola ----
+#define BALL_W 16
+#define BALL_H 16
+
+// ---------------- BITMAPS ----------------
+
+const uint8_t gameOver[64 * 64] = {
+    0xff, 0x87, 0xff, 0xf0, 0x0f, 0xff, 0xe1, 0xff, 0xfe, 0x01, 0xff, 0x80, 0x01, 0xff, 0x80, 0x7f,
+    0xfc, 0x00, 0xfe, 0x00, 0x00, 0xff, 0x00, 0x3f, 0xfc, 0x00, 0xfc, 0x00, 0x00, 0x3f, 0x00, 0x3f,
+    0xfc, 0x30, 0x78, 0x0f, 0xf0, 0x1e, 0x0c, 0x3f, 0xf8, 0x78, 0x30, 0x3f, 0xfc, 0x0c, 0x1e, 0x1f,
+    0xf8, 0x78, 0x00, 0xff, 0xfe, 0x00, 0x1e, 0x1f, 0xf0, 0x7c, 0x01, 0xff, 0xff, 0x80, 0x3e, 0x0f,
+    0xf0, 0xff, 0x03, 0xff, 0xff, 0x80, 0xff, 0x0f, 0xe1, 0xff, 0x83, 0xff, 0xff, 0xc1, 0xff, 0x87,
+    0xe1, 0xff, 0x87, 0xff, 0xff, 0xe1, 0xff, 0x87, 0xe0, 0xc7, 0x87, 0xff, 0xff, 0xe1, 0xe3, 0x07,
+    0xf0, 0x00, 0x0f, 0x07, 0xc0, 0xe1, 0x00, 0x0f, 0xf0, 0x00, 0x0f, 0x03, 0xc0, 0xf0, 0x00, 0x0f,
+    0xf8, 0x00, 0x0f, 0x03, 0xc0, 0xf0, 0x00, 0x1f, 0xfe, 0x18, 0x0f, 0x03, 0xc0, 0xf0, 0x18, 0x7f,
+    0xff, 0xfe, 0x0f, 0x03, 0xc0, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0x0f, 0x07, 0xc0, 0xf0, 0xff, 0xff,
+    0xff, 0xff, 0x0f, 0xff, 0xff, 0xf0, 0xff, 0xff, 0xff, 0xfe, 0x0f, 0xff, 0xff, 0xf0, 0x7f, 0xff,
+    0xfe, 0x18, 0x0f, 0xfc, 0x7f, 0xf0, 0x18, 0x7f, 0xf8, 0x00, 0x0f, 0xfc, 0x3f, 0xf0, 0x00, 0x1f,
+    0xf0, 0x00, 0x03, 0xfc, 0x3f, 0xc0, 0x00, 0x0f, 0xf0, 0x01, 0x01, 0xfc, 0x7f, 0x80, 0x80, 0x0f,
+    0xe0, 0xe7, 0x00, 0xff, 0xff, 0x00, 0xe7, 0x07, 0xe1, 0xff, 0x80, 0x7f, 0xfe, 0x01, 0xff, 0x87,
+    0xe1, 0xff, 0xc0, 0x7f, 0xfe, 0x03, 0xff, 0x87, 0xf0, 0xfe, 0x00, 0x3f, 0xfc, 0x00, 0x7f, 0x0f,
+    0xf0, 0x7c, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x0f, 0xf8, 0x78, 0x0c, 0x00, 0x00, 0x30, 0x1e, 0x1f,
+    0xf8, 0x78, 0x3c, 0x00, 0x00, 0x3c, 0x1e, 0x1f, 0xfc, 0x30, 0xff, 0xff, 0xff, 0xff, 0x0c, 0x3f,
+    0xfc, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x3f, 0xfc, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x3f,
+    0xfe, 0x01, 0xff, 0xff, 0xff, 0xff, 0x80, 0x7f, 0xff, 0x87, 0xff, 0xff, 0xff, 0xff, 0xe1, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xff, 0x8f, 0xf3, 0xc7, 0x81, 0xff,
+    0xff, 0xe0, 0x3f, 0x0f, 0xe1, 0xc7, 0x00, 0xff, 0xff, 0x80, 0x1f, 0x07, 0xe0, 0x83, 0x00, 0xff,
+    0xff, 0x80, 0x1e, 0x07, 0xe0, 0x83, 0x01, 0xff, 0xff, 0x07, 0x3e, 0x03, 0xe0, 0x03, 0x0f, 0xff,
+    0xff, 0x0c, 0x0e, 0x03, 0xe0, 0x03, 0x01, 0xff, 0xff, 0x0c, 0x0c, 0x01, 0xc0, 0x03, 0x01, 0xff,
+    0xff, 0x0c, 0x0c, 0x01, 0xc0, 0x01, 0x01, 0xff, 0xff, 0x06, 0x08, 0x00, 0xc0, 0x01, 0x0f, 0xff,
+    0xff, 0x80, 0x08, 0x00, 0xc0, 0x01, 0x01, 0xff, 0xff, 0x80, 0x10, 0x00, 0xc4, 0x01, 0x00, 0xff,
+    0xff, 0xc0, 0x30, 0xf8, 0x44, 0x31, 0x00, 0xff, 0xff, 0xf0, 0x79, 0xfc, 0xc6, 0x31, 0x81, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x9f, 0x70, 0x38, 0x3f, 0xff,
+    0xff, 0xfc, 0x07, 0x0e, 0x20, 0x10, 0x0f, 0xff, 0xff, 0xf0, 0x03, 0x0c, 0x20, 0x10, 0x0f, 0xff,
+    0xff, 0xf0, 0x01, 0x0c, 0x20, 0x30, 0x07, 0xff, 0xff, 0xe0, 0xe1, 0x84, 0x21, 0xf0, 0x87, 0xff,
+    0xff, 0xe1, 0xf1, 0x80, 0x60, 0x30, 0x87, 0xff, 0xff, 0xe1, 0xf0, 0x80, 0x60, 0x30, 0x07, 0xff,
+    0xff, 0xe1, 0xf0, 0xc0, 0x60, 0x30, 0x0f, 0xff, 0xff, 0xe0, 0xe1, 0xc0, 0xe0, 0x70, 0x1f, 0xff,
+    0xff, 0xf0, 0x01, 0xc0, 0xe0, 0x30, 0x0f, 0xff, 0xff, 0xf0, 0x03, 0xe1, 0xe0, 0x10, 0x0f, 0xff,
+    0xff, 0xf8, 0x07, 0xe1, 0xe0, 0x10, 0x0f, 0xff, 0xff, 0xfe, 0x0f, 0xf3, 0xf0, 0x39, 0x8f, 0xff};
+const uint8_t ball[32] = {
+    0x00, 0x00, 0x01, 0xc0, 0x01, 0xe0, 0x06, 0xe8, 0x3f, 0x0c, 0x7f, 0x0c, 0x7f, 0x06, 0x4d, 0x0c,
+    0x07, 0xdc, 0x07, 0xfc, 0x07, 0xfc, 0x03, 0xd8, 0x1f, 0x08, 0x0e, 0x00, 0x04, 0x00, 0x00, 0x00};
+
+// Plataforma 30x8 px (rectángulo sólido)
+const uint8_t platform_bitmap[56] = {
+
+    0x80, 0x00, 0x01, 0x7f, 0xff, 0xfe, 0x41, 0x42, 0x82, 0x4c, 0xe7, 0x32, 0x4c, 0x66, 0x32, 0x73,
+    0x18, 0xce, 0x73, 0x99, 0xce, 0x6d, 0x5a, 0xb6, 0x4e, 0xff, 0x72, 0x6d, 0x5a, 0xb6, 0x73, 0x81,
+    0xce, 0x13, 0x24, 0xc8, 0xff, 0x7e, 0xff, 0xff, 0x42, 0xff, 0xff, 0x18, 0xff, 0xff, 0x18, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+// Bitmap negro para borrar
+const uint8_t clear_platform[56] = {0};
+const uint8_t clear_ball[32] = {0};
+
+// ---------------- FUNCIONES ----------------
+void draw_platform(SSD1306_t *dev, int x, int y_page)
+{
+    ssd1306_bitmaps(dev, x, y_page, platform_bitmap, PLATFORM_W, PLATFORM_H, true);
+}
+void clear_platform_func(SSD1306_t *dev, int x, int y_page)
+{
+    ssd1306_bitmaps(dev, x, y_page, clear_platform, PLATFORM_W, PLATFORM_H, false);
+}
+
+void draw_ball(SSD1306_t *dev, int x, int y_page)
+{
+    ssd1306_bitmaps(dev, x, y_page, ball, BALL_W, BALL_H, false);
+}
+void clear_ball_func(SSD1306_t *dev, int x, int y_page)
+{
+    ssd1306_bitmaps(dev, x, y_page, clear_ball, BALL_W, BALL_H, false);
+}
+void oneBallLess(SSD1306_t *dev, int numBall)
+{
+    char buffer[16];
+    ssd1306_clear_screen(dev, false);
+    sprintf(buffer, "BALLS: %d", numBall);
+    ssd1306_display_text(dev, 0, buffer, strlen(buffer), false);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    ssd1306_clear_screen(dev, false);
+}
+
+// ---------------- MAIN ----------------
 void app_main(void)
 {
+    SSD1306_t dev;
+    i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
+    ssd1306_init(&dev, SCREEN_WIDTH, SCREEN_HEIGHT);
+    ssd1306_clear_screen(&dev, false);
+
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(VRX_PIN, ADC_ATTEN_DB_11);
     adc1_config_channel_atten(VRY_PIN, ADC_ATTEN_DB_11);
 
-    gpio_config_t io_conf = {
-        .pin_bit_mask = 1ULL << SW_PIN,
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    gpio_config(&io_conf);
+    int plat_x = PLATFORM_X;
+    int prev_x = -1;
 
-    SSD1306_t dev;
-    i2c_master_init(&dev, 21, 22, 0);
-    ssd1306_init(&dev, SCREEN_WIDTH, SCREEN_HEIGHT);
-    ssd1306_clear_screen(&dev, false);
-
-    // Posición en caracteres (cada carácter ocupa ~6-8 píxeles en horizontal, 1 página (8 píxeles) en vertical)
-    // Para simplificar, usaremos pasos de 8 píxeles horizontalmente
-    int char_x = SCREEN_WIDTH / 2;
-    int char_y = SCREEN_HEIGHT / 2 / 8;  // página vertical
-
-    int prev_char_x = char_x;
-    int prev_char_y = char_y;
-
-    while (1) {
-        int raw_x = adc1_get_raw(VRX_PIN);
-        int raw_y = adc1_get_raw(VRY_PIN);
-        int sw = gpio_get_level(SW_PIN);
-
-        // Actualizar posición
-        if (raw_x > 1500) char_x -= 8;  // mover 8 píxeles a la izquierda
-        if (raw_x < 2500) char_x += 8;  // mover 8 píxeles a la derecha
-        if (raw_y < 1500) char_y += 1;  // mover página abajo
-        if (raw_y > 2500) char_y -= 1;  // mover página arriba
-
-        // Limitar bordes
-        if (char_x < 0) char_x = 0;
-        if (char_x > SCREEN_WIDTH - 8) char_x = SCREEN_WIDTH - 8;  // dejar espacio para un carácter
-        if (char_y < 0) char_y = 0;
-        if (char_y > (SCREEN_HEIGHT / 8) - 1) char_y = (SCREEN_HEIGHT / 8) - 1;
-
-     if (char_x != prev_char_x || char_y != prev_char_y) {
-    // Borra toda la línea anterior
-    ssd1306_clear_line(&dev, prev_char_y, false);
-
-    // Dibuja el nuevo carácter
-    ssd1306_display_text_box1(&dev, char_y, char_x, "o", 1, 1, false, 0);
-
+    int ball_x = SCREEN_WIDTH / 2 - BALL_W / 2;
+    int ball_y = 22; // página inicial de la bola
+    int num_balls = 3;
+    int prev_ball_x = -1;
+    int prev_ball_y = -1;
+    bool direction = true; // dirección de la bola
+    // Dibujo inicial
+    draw_platform(&dev, plat_x, PLATFORM_Y_PAGE);
+    draw_ball(&dev, ball_x, ball_y);
     ssd1306_show_buffer(&dev);
 
-    prev_char_x = char_x;
-    prev_char_y = char_y;
-}
+    int direction_x = 0;  // 0: recto, -1: izquierda, 1: derecha
+    int speed = 2;        // velocidad de la bola
+    int speedCounter = 0; // contador para aumentar la velocidad
+    while (num_balls > 0)
+    {
+        int raw_x = adc1_get_raw(VRX_PIN);
 
-        if (sw == 0) {
-            ssd1306_display_text_box1(&dev, char_y, char_x, " ", 1, 1, false, 0);
-            char_x = SCREEN_WIDTH / 2;
-            char_y = SCREEN_HEIGHT / 2 / 8;
-            ssd1306_display_text_box1(&dev, char_y, char_x, "o", 1, 1, false, 0);
-            ssd1306_show_buffer(&dev);
+        // Mover plataforma
+        if (raw_x < DEADZONE_LOW)
+            plat_x -= MOVE_STEP_FINE;
+        else if (raw_x > DEADZONE_HIGH)
+            plat_x += MOVE_STEP_FINE;
 
-            prev_char_x = char_x;
-            prev_char_y = char_y;
+        if (plat_x < 0)
+            plat_x = 0;
+        if (plat_x > SCREEN_WIDTH - PLATFORM_W)
+            plat_x = SCREEN_WIDTH - PLATFORM_W;
+
+        // Redibujar plataforma si cambió
+        if (plat_x != prev_x)
+        {
+            if (prev_x >= 0)
+                clear_platform_func(&dev, prev_x, PLATFORM_Y_PAGE);
+            draw_platform(&dev, plat_x, PLATFORM_Y_PAGE);
+            prev_x = plat_x;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        // Rebote en el borde inferior
+        if (ball_y >= (SCREEN_HEIGHT - BALL_H))
+        {
+            direction = !direction;
+        }
+        // Rebote en la plataforma (colisión mejorada)
+        else if (
+            (ball_y <= PLATFORM_Y_PAGE + PLATFORM_H) &&
+            (ball_y + BALL_H >= PLATFORM_Y_PAGE) &&
+            (ball_x + BALL_W > plat_x) &&
+            (ball_x < plat_x + PLATFORM_W))
+        {
+            direction = !direction;
+
+            // Determina la zona de impacto en la plataforma
+            int relative_x = ball_x + BALL_W / 2 - plat_x; // centro de la bola respecto a la plataforma
+            if (relative_x < PLATFORM_W / 3)
+            {
+                direction_x = -1; // izquierda
+            }
+            else if (relative_x > 2 * PLATFORM_W / 3)
+            {
+                direction_x = 1; // derecha
+            }
+            else
+            {
+                int r = esp_random() % 3 - 1;  
+                direction_x = r;
+            }
+
+            // Opcional: ajusta la posición para evitar que se "pegue"
+            ball_y = PLATFORM_Y_PAGE + PLATFORM_H;
+            if (speedCounter == 3)
+            {
+                speed += 1; // Aumenta la velocidad de la bola cada 3 iteraciones
+                speedCounter = 0;
+            }
+            else
+            {
+                speedCounter++;
+            }
+        }
+        // Rebote en los bordes laterales
+        if (ball_x <= 0)
+        {
+            direction_x = 1; // rebota hacia la derecha
+        }
+        else if (ball_x >= SCREEN_WIDTH - BALL_W)
+        {
+            direction_x = -1; // rebota hacia la izquierda
+        }
+        // Bola sale por arriba
+        else if (ball_y <= 0)
+        {
+            oneBallLess(&dev, --num_balls);
+            plat_x = PLATFORM_X;
+            ball_y = 22;
+            ball_x = SCREEN_WIDTH / 2 - BALL_W / 2;
+            direction = true;
+            direction_x = 0;
+        }
+
+        // Mover bola
+        if (direction)
+        {
+            ball_y = ball_y + 2; // Mueve la bola hacia abajo
+        }
+        else
+        {
+            ball_y = ball_y - 2;
+        }
+        ball_x += direction_x;
+
+        // Redibujar bola
+        if (ball_x != prev_ball_x || ball_y != prev_ball_y)
+        {
+            if (prev_ball_x >= 0)
+                clear_ball_func(&dev, prev_ball_x, prev_ball_y);
+            draw_ball(&dev, ball_x, ball_y);
+            prev_ball_x = ball_x;
+            prev_ball_y = ball_y;
+        }
+
+        ssd1306_show_buffer(&dev);
+        vTaskDelay(pdMS_TO_TICKS(30/(speed * 10))); // Ajusta el delay según la velocidad
     }
+    ssd1306_clear_screen(&dev, false);
+    ssd1306_bitmaps(&dev, (SCREEN_WIDTH / 2) - 32, 0, gameOver, 64, 64, true);
 }
