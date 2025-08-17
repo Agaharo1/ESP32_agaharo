@@ -13,8 +13,8 @@
 #define SCREEN_HEIGHT 64
 
 // Pines del joystick (ADC1)
-#define VRX_PIN ADC1_CHANNEL_6 // GPIO34
-#define VRY_PIN ADC1_CHANNEL_7 // GPIO35
+#define VRX_PIN ADC1_CHANNEL_6
+#define VRY_PIN ADC1_CHANNEL_7
 
 // Movimiento
 #define DEADZONE_LOW 1800
@@ -24,54 +24,35 @@
 // ---- Plataforma ----
 #define PLATFORM_W 24
 #define PLATFORM_H 15
-#define PLATFORM_Y_PAGE 0                           // ajusta para subir o bajar la plataforma
-#define PLATFORM_X (SCREEN_WIDTH - PLATFORM_W) / 2  // Centrado horizontalmente
-#define PLATFORM_Y (SCREEN_HEIGHT - PLATFORM_H - 1) // Página de la plataforma
+#define PLATFORM_Y_PAGE 0
+#define PLATFORM_X (SCREEN_WIDTH - PLATFORM_W) / 2
 
-// ---- Bola ----
+// ---- Ball ----
 #define BALL_W 16
 #define BALL_H 16
 
+//----GameOver
+#define GAME_OVER_X SCREEN_WIDTH / 2
+#define GAME_OVER_Y 20
 // ---------------- BITMAPS ----------------
 
-const uint8_t gameOver[64 * 64] = {
-    0xff, 0x87, 0xff, 0xf0, 0x0f, 0xff, 0xe1, 0xff, 0xfe, 0x01, 0xff, 0x80, 0x01, 0xff, 0x80, 0x7f,
-    0xfc, 0x00, 0xfe, 0x00, 0x00, 0xff, 0x00, 0x3f, 0xfc, 0x00, 0xfc, 0x00, 0x00, 0x3f, 0x00, 0x3f,
-    0xfc, 0x30, 0x78, 0x0f, 0xf0, 0x1e, 0x0c, 0x3f, 0xf8, 0x78, 0x30, 0x3f, 0xfc, 0x0c, 0x1e, 0x1f,
-    0xf8, 0x78, 0x00, 0xff, 0xfe, 0x00, 0x1e, 0x1f, 0xf0, 0x7c, 0x01, 0xff, 0xff, 0x80, 0x3e, 0x0f,
-    0xf0, 0xff, 0x03, 0xff, 0xff, 0x80, 0xff, 0x0f, 0xe1, 0xff, 0x83, 0xff, 0xff, 0xc1, 0xff, 0x87,
-    0xe1, 0xff, 0x87, 0xff, 0xff, 0xe1, 0xff, 0x87, 0xe0, 0xc7, 0x87, 0xff, 0xff, 0xe1, 0xe3, 0x07,
-    0xf0, 0x00, 0x0f, 0x07, 0xc0, 0xe1, 0x00, 0x0f, 0xf0, 0x00, 0x0f, 0x03, 0xc0, 0xf0, 0x00, 0x0f,
-    0xf8, 0x00, 0x0f, 0x03, 0xc0, 0xf0, 0x00, 0x1f, 0xfe, 0x18, 0x0f, 0x03, 0xc0, 0xf0, 0x18, 0x7f,
-    0xff, 0xfe, 0x0f, 0x03, 0xc0, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0x0f, 0x07, 0xc0, 0xf0, 0xff, 0xff,
-    0xff, 0xff, 0x0f, 0xff, 0xff, 0xf0, 0xff, 0xff, 0xff, 0xfe, 0x0f, 0xff, 0xff, 0xf0, 0x7f, 0xff,
-    0xfe, 0x18, 0x0f, 0xfc, 0x7f, 0xf0, 0x18, 0x7f, 0xf8, 0x00, 0x0f, 0xfc, 0x3f, 0xf0, 0x00, 0x1f,
-    0xf0, 0x00, 0x03, 0xfc, 0x3f, 0xc0, 0x00, 0x0f, 0xf0, 0x01, 0x01, 0xfc, 0x7f, 0x80, 0x80, 0x0f,
-    0xe0, 0xe7, 0x00, 0xff, 0xff, 0x00, 0xe7, 0x07, 0xe1, 0xff, 0x80, 0x7f, 0xfe, 0x01, 0xff, 0x87,
-    0xe1, 0xff, 0xc0, 0x7f, 0xfe, 0x03, 0xff, 0x87, 0xf0, 0xfe, 0x00, 0x3f, 0xfc, 0x00, 0x7f, 0x0f,
-    0xf0, 0x7c, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x0f, 0xf8, 0x78, 0x0c, 0x00, 0x00, 0x30, 0x1e, 0x1f,
-    0xf8, 0x78, 0x3c, 0x00, 0x00, 0x3c, 0x1e, 0x1f, 0xfc, 0x30, 0xff, 0xff, 0xff, 0xff, 0x0c, 0x3f,
-    0xfc, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x3f, 0xfc, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x3f,
-    0xfe, 0x01, 0xff, 0xff, 0xff, 0xff, 0x80, 0x7f, 0xff, 0x87, 0xff, 0xff, 0xff, 0xff, 0xe1, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xff, 0x8f, 0xf3, 0xc7, 0x81, 0xff,
-    0xff, 0xe0, 0x3f, 0x0f, 0xe1, 0xc7, 0x00, 0xff, 0xff, 0x80, 0x1f, 0x07, 0xe0, 0x83, 0x00, 0xff,
-    0xff, 0x80, 0x1e, 0x07, 0xe0, 0x83, 0x01, 0xff, 0xff, 0x07, 0x3e, 0x03, 0xe0, 0x03, 0x0f, 0xff,
-    0xff, 0x0c, 0x0e, 0x03, 0xe0, 0x03, 0x01, 0xff, 0xff, 0x0c, 0x0c, 0x01, 0xc0, 0x03, 0x01, 0xff,
-    0xff, 0x0c, 0x0c, 0x01, 0xc0, 0x01, 0x01, 0xff, 0xff, 0x06, 0x08, 0x00, 0xc0, 0x01, 0x0f, 0xff,
-    0xff, 0x80, 0x08, 0x00, 0xc0, 0x01, 0x01, 0xff, 0xff, 0x80, 0x10, 0x00, 0xc4, 0x01, 0x00, 0xff,
-    0xff, 0xc0, 0x30, 0xf8, 0x44, 0x31, 0x00, 0xff, 0xff, 0xf0, 0x79, 0xfc, 0xc6, 0x31, 0x81, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x9f, 0x70, 0x38, 0x3f, 0xff,
-    0xff, 0xfc, 0x07, 0x0e, 0x20, 0x10, 0x0f, 0xff, 0xff, 0xf0, 0x03, 0x0c, 0x20, 0x10, 0x0f, 0xff,
-    0xff, 0xf0, 0x01, 0x0c, 0x20, 0x30, 0x07, 0xff, 0xff, 0xe0, 0xe1, 0x84, 0x21, 0xf0, 0x87, 0xff,
-    0xff, 0xe1, 0xf1, 0x80, 0x60, 0x30, 0x87, 0xff, 0xff, 0xe1, 0xf0, 0x80, 0x60, 0x30, 0x07, 0xff,
-    0xff, 0xe1, 0xf0, 0xc0, 0x60, 0x30, 0x0f, 0xff, 0xff, 0xe0, 0xe1, 0xc0, 0xe0, 0x70, 0x1f, 0xff,
-    0xff, 0xf0, 0x01, 0xc0, 0xe0, 0x30, 0x0f, 0xff, 0xff, 0xf0, 0x03, 0xe1, 0xe0, 0x10, 0x0f, 0xff,
-    0xff, 0xf8, 0x07, 0xe1, 0xe0, 0x10, 0x0f, 0xff, 0xff, 0xfe, 0x0f, 0xf3, 0xf0, 0x39, 0x8f, 0xff};
+const uint8_t gameOver[32 * 32] = {
+    0x8f, 0x8e, 0x31, 0x0f, 0x07, 0x06, 0x21, 0x0f, 0x3f, 0x26, 0x01, 0x3f, 0x3e, 0x26, 0x01, 0x0f,
+    0x22, 0x06, 0x49, 0x0f, 0x22, 0x06, 0x59, 0x3f, 0x06, 0x66, 0x79, 0x1f, 0x86, 0x66, 0x79, 0x0f,
+    0xff, 0xff, 0xff, 0xff, 0xdd, 0xe8, 0x63, 0xff, 0x84, 0xc8, 0x60, 0xff, 0x20, 0xc9, 0xe4, 0xff,
+    0x30, 0xc9, 0xe4, 0xff, 0x30, 0x98, 0x60, 0xfc, 0x32, 0x18, 0xe0, 0xfc, 0x22, 0x19, 0xe4, 0xfc,
+    0x06, 0x38, 0x64, 0xf8, 0xcf, 0x38, 0x66, 0xc1, 0xff, 0xff, 0xff, 0x87, 0xff, 0xff, 0xff, 0x3f,
+    0xff, 0xff, 0xff, 0x3f, 0xff, 0xff, 0xe0, 0x03, 0xff, 0xff, 0xc0, 0x01, 0xff, 0xff, 0x80, 0x00,
+    0xff, 0xff, 0x80, 0x00, 0xff, 0xff, 0x86, 0x30, 0xff, 0xff, 0x80, 0x00, 0xff, 0xff, 0x80, 0x00,
+    0xff, 0xff, 0x80, 0x00, 0xff, 0xff, 0x80, 0x00, 0xff, 0xff, 0x81, 0xc0, 0xff, 0xff, 0xc3, 0xe1};
+
+
+
+
 const uint8_t ball[32] = {
     0x00, 0x00, 0x01, 0xc0, 0x01, 0xe0, 0x06, 0xe8, 0x3f, 0x0c, 0x7f, 0x0c, 0x7f, 0x06, 0x4d, 0x0c,
     0x07, 0xdc, 0x07, 0xfc, 0x07, 0xfc, 0x03, 0xd8, 0x1f, 0x08, 0x0e, 0x00, 0x04, 0x00, 0x00, 0x00};
 
-// Plataforma 30x8 px (rectángulo sólido)
 const uint8_t platform_bitmap[56] = {
 
     0x80, 0x00, 0x01, 0x7f, 0xff, 0xfe, 0x41, 0x42, 0x82, 0x4c, 0xe7, 0x32, 0x4c, 0x66, 0x32, 0x73,
@@ -79,9 +60,9 @@ const uint8_t platform_bitmap[56] = {
     0xce, 0x13, 0x24, 0xc8, 0xff, 0x7e, 0xff, 0xff, 0x42, 0xff, 0xff, 0x18, 0xff, 0xff, 0x18, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-// Bitmap negro para borrar
 const uint8_t clear_platform[56] = {0};
 const uint8_t clear_ball[32] = {0};
+const uint8_t clearGameOver[32 * 32] = {0};
 
 // ---------------- FUNCIONES ----------------
 void draw_platform(SSD1306_t *dev, int x, int y_page)
@@ -101,6 +82,7 @@ void clear_ball_func(SSD1306_t *dev, int x, int y_page)
 {
     ssd1306_bitmaps(dev, x, y_page, clear_ball, BALL_W, BALL_H, false);
 }
+
 void oneBallLess(SSD1306_t *dev, int numBall)
 {
     char buffer[16];
@@ -111,7 +93,67 @@ void oneBallLess(SSD1306_t *dev, int numBall)
     ssd1306_clear_screen(dev, false);
 }
 
-// ---------------- MAIN ----------------
+void game_over_screen(SSD1306_t *dev)
+{
+    int x = SCREEN_WIDTH / 2 - 16;  
+    int y = GAME_OVER_Y;
+    int prev_x = -1, prev_y = -1;
+
+    bool dir_y = true;  
+    int dir_x = 1;      
+    int speed = 2;      
+
+    ssd1306_clear_screen(dev, false);
+    ssd1306_display_text(dev, 1, "    TRY AGAIN?", 14, false);
+
+    while (1)
+    {
+   
+        if (prev_x >= 0 && prev_y >= 0)
+            ssd1306_bitmaps(dev, prev_x, prev_y, clearGameOver, 32, 32, false);
+
+    
+        ssd1306_bitmaps(dev, x, y, gameOver, 32, 32, true);
+        ssd1306_show_buffer(dev);
+
+        prev_x = x;
+        prev_y = y;
+
+        vTaskDelay(pdMS_TO_TICKS(80));
+
+        if (dir_y)
+            y += speed;
+        else
+            y -= speed;
+
+        x += dir_x * speed;
+
+   
+        if (y <= 18)
+            dir_y = true;
+        else if (y >= SCREEN_HEIGHT - 32)
+            dir_y = false;
+
+       
+        if (x <= 0)
+            dir_x = 1;
+        else if (x >= SCREEN_WIDTH - 32)
+            dir_x = -1;
+
+    
+        int raw_y = adc1_get_raw(VRY_PIN);
+        int raw_x = adc1_get_raw(VRX_PIN);
+        if (raw_y < DEADZONE_LOW || raw_y > DEADZONE_HIGH ||
+            raw_x < DEADZONE_LOW || raw_x > DEADZONE_HIGH)
+        {
+            break;
+        }
+    }
+}
+
+
+
+
 void app_main(void)
 {
     SSD1306_t dev;
@@ -122,134 +164,130 @@ void app_main(void)
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(VRX_PIN, ADC_ATTEN_DB_11);
     adc1_config_channel_atten(VRY_PIN, ADC_ATTEN_DB_11);
-
-    int plat_x = PLATFORM_X;
-    int prev_x = -1;
-
-    int ball_x = SCREEN_WIDTH / 2 - BALL_W / 2;
-    int ball_y = 22; // página inicial de la bola
-    int num_balls = 3;
-    int prev_ball_x = -1;
-    int prev_ball_y = -1;
-    bool direction = true; // dirección de la bola
-    // Dibujo inicial
-    draw_platform(&dev, plat_x, PLATFORM_Y_PAGE);
-    draw_ball(&dev, ball_x, ball_y);
-    ssd1306_show_buffer(&dev);
-
-    int direction_x = 0;  // 0: recto, -1: izquierda, 1: derecha
-    int speed = 2;        // velocidad de la bola
-    int speedCounter = 0; // contador para aumentar la velocidad
-    while (num_balls > 0)
+    while (1)
     {
-        int raw_x = adc1_get_raw(VRX_PIN);
 
-        // Mover plataforma
-        if (raw_x < DEADZONE_LOW)
-            plat_x -= MOVE_STEP_FINE;
-        else if (raw_x > DEADZONE_HIGH)
-            plat_x += MOVE_STEP_FINE;
+        int plat_x = PLATFORM_X;
+        int prev_x = -1;
 
-        if (plat_x < 0)
-            plat_x = 0;
-        if (plat_x > SCREEN_WIDTH - PLATFORM_W)
-            plat_x = SCREEN_WIDTH - PLATFORM_W;
+        int ball_x = SCREEN_WIDTH / 2 - BALL_W / 2;
+        int ball_y = 22;
+        int num_balls = 3;
+        int prev_ball_x = -1;
+        int prev_ball_y = -1;
+        bool direction = true;
+        int direction_x = 0;  
+        int speed = 2;        
+        int speedCounter = 0; 
 
-        // Redibujar plataforma si cambió
-        if (plat_x != prev_x)
-        {
-            if (prev_x >= 0)
-                clear_platform_func(&dev, prev_x, PLATFORM_Y_PAGE);
-            draw_platform(&dev, plat_x, PLATFORM_Y_PAGE);
-            prev_x = plat_x;
-        }
-
-        // Rebote en el borde inferior
-        if (ball_y >= (SCREEN_HEIGHT - BALL_H))
-        {
-            direction = !direction;
-        }
-        // Rebote en la plataforma (colisión mejorada)
-        else if (
-            (ball_y <= PLATFORM_Y_PAGE + PLATFORM_H) &&
-            (ball_y + BALL_H >= PLATFORM_Y_PAGE) &&
-            (ball_x + BALL_W > plat_x) &&
-            (ball_x < plat_x + PLATFORM_W))
-        {
-            direction = !direction;
-
-            // Determina la zona de impacto en la plataforma
-            int relative_x = ball_x + BALL_W / 2 - plat_x; // centro de la bola respecto a la plataforma
-            if (relative_x < PLATFORM_W / 3)
-            {
-                direction_x = -1; // izquierda
-            }
-            else if (relative_x > 2 * PLATFORM_W / 3)
-            {
-                direction_x = 1; // derecha
-            }
-            else
-            {
-                int r = esp_random() % 3 - 1;  
-                direction_x = r;
-            }
-
-            // Opcional: ajusta la posición para evitar que se "pegue"
-            ball_y = PLATFORM_Y_PAGE + PLATFORM_H;
-            if (speedCounter == 3)
-            {
-                speed += 1; // Aumenta la velocidad de la bola cada 3 iteraciones
-                speedCounter = 0;
-            }
-            else
-            {
-                speedCounter++;
-            }
-        }
-        // Rebote en los bordes laterales
-        if (ball_x <= 0)
-        {
-            direction_x = 1; // rebota hacia la derecha
-        }
-        else if (ball_x >= SCREEN_WIDTH - BALL_W)
-        {
-            direction_x = -1; // rebota hacia la izquierda
-        }
-        // Bola sale por arriba
-        else if (ball_y <= 0)
-        {
-            oneBallLess(&dev, --num_balls);
-            plat_x = PLATFORM_X;
-            ball_y = 22;
-            ball_x = SCREEN_WIDTH / 2 - BALL_W / 2;
-            direction = true;
-            direction_x = 0;
-        }
-
-        // Mover bola
-        if (direction)
-        {
-            ball_y = ball_y + 2; // Mueve la bola hacia abajo
-        }
-        else
-        {
-            ball_y = ball_y - 2;
-        }
-        ball_x += direction_x;
-
-        // Redibujar bola
-        if (ball_x != prev_ball_x || ball_y != prev_ball_y)
-        {
-            if (prev_ball_x >= 0)
-                clear_ball_func(&dev, prev_ball_x, prev_ball_y);
-            draw_ball(&dev, ball_x, ball_y);
-            prev_ball_x = ball_x;
-            prev_ball_y = ball_y;
-        }
-
+        ssd1306_clear_screen(&dev, false);
+        draw_platform(&dev, plat_x, PLATFORM_Y_PAGE);
+        draw_ball(&dev, ball_x, ball_y);
         ssd1306_show_buffer(&dev);
-        vTaskDelay(pdMS_TO_TICKS(30/(speed * 10))); // Ajusta el delay según la velocidad
+
+        while (num_balls > 0)
+        {
+            if (plat_x != prev_x)
+            {
+                if (prev_x >= 0)
+                    clear_platform_func(&dev, prev_x, PLATFORM_Y_PAGE);
+                draw_platform(&dev, plat_x, PLATFORM_Y_PAGE);
+                prev_x = plat_x;
+            }
+
+            int raw_x = adc1_get_raw(VRX_PIN);
+
+            if (raw_x < DEADZONE_LOW)
+                plat_x -= MOVE_STEP_FINE;
+            else if (raw_x > DEADZONE_HIGH)
+                plat_x += MOVE_STEP_FINE;
+
+            if (plat_x < 0)
+                plat_x = 0;
+            if (plat_x > SCREEN_WIDTH - PLATFORM_W)
+                plat_x = SCREEN_WIDTH - PLATFORM_W;
+
+            if (ball_y >= (SCREEN_HEIGHT - BALL_H))
+            {
+                direction = !direction;
+            }
+
+            else if (
+                (ball_y <= PLATFORM_Y_PAGE + PLATFORM_H) &&
+                (ball_y + BALL_H >= PLATFORM_Y_PAGE) &&
+                (ball_x + BALL_W > plat_x) &&
+                (ball_x < plat_x + PLATFORM_W))
+            {
+                direction = !direction;
+
+                int relative_x = ball_x + BALL_W / 2 - plat_x;
+                if (relative_x < PLATFORM_W / 3)
+                {
+                    direction_x = -1;
+                }
+                else if (relative_x > 2 * PLATFORM_W / 3)
+                {
+                    direction_x = 1;
+                }
+                else
+                {
+                    int r = esp_random() % 3 - 1;
+                    direction_x = r;
+                }
+                ball_y = PLATFORM_Y_PAGE + PLATFORM_H;
+                if (speedCounter == 3)
+                {
+                    speed++;
+                    speedCounter = 0;
+                }
+                else
+                {
+                    speedCounter++;
+                }
+            }
+            // Rebote en los bordes laterales
+            if (ball_x <= 0)
+            {
+                direction_x = 1; // rebota hacia la derecha
+            }
+            else if (ball_x >= SCREEN_WIDTH - BALL_W)
+            {
+                direction_x = -1; // rebota hacia la izquierda
+            }
+            // Bola sale por arriba
+            else if (ball_y <= 0)
+            {
+                oneBallLess(&dev, --num_balls);
+                plat_x = PLATFORM_X;
+                ball_y = 22;
+                ball_x = SCREEN_WIDTH / 2 - BALL_W / 2;
+                direction = true;
+                direction_x = 0;
+            }
+
+            // Mover bola
+            if (direction)
+            {
+                ball_y = ball_y + 2; // Mueve la bola hacia abajo
+            }
+            else
+            {
+                ball_y = ball_y - 2;
+            }
+            ball_x += direction_x;
+
+            if (ball_x != prev_ball_x || ball_y != prev_ball_y)
+            {
+                if (prev_ball_x >= 0)
+                    clear_ball_func(&dev, prev_ball_x, prev_ball_y);
+                draw_ball(&dev, ball_x, ball_y);
+                prev_ball_x = ball_x;
+                prev_ball_y = ball_y;
+            }
+
+            ssd1306_show_buffer(&dev);
+            vTaskDelay(pdMS_TO_TICKS(30 / (speed * 10)));
+        }
+        game_over_screen(&dev);
     }
-    ssd1306_clear_screen(&dev, false);
-    ssd1306_bitmaps(&dev, (SCREEN_WIDTH / 2) - 32, 0, gameOver, 64, 64, true);
 }
