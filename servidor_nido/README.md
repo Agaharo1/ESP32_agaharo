@@ -23,5 +23,6 @@ Inicia el servidor HTTP en el puerto 8080:
 python3 -m http.server 8080
 ```
 Accede desde tu ordenador en:
-
+```bash
 👉 http://192.168.1.34:8080
+```
