@@ -7,17 +7,21 @@ Este proyecto permite recibir, almacenar y visualizar fotografías capturadas po
 Para poner en marcha el servidor, aplicar cambios en el código de Python o actualizar la configuración, sitúate en la carpeta `servidor_nido` y ejecuta:
 
 ```bash
-sudo docker-compose up -d --build
+docker-compose up -d --build
+docker-compose stop
+```
 
-
-
+##  Visualizar las Fotos Guardadas
 Entra en la carpeta de las fotos:
 
-Bash
+```bash
 cd ~/Documents/Github/Esp32_agaharo/servidor_nido/fotos_guardadas
-Inicia el servidor en el puerto 8080:
+```
+Inicia el servidor HTTP en el puerto 8080:
 
-Bash
+```bash
 python3 -m http.server 8080
+```
 Accede desde tu ordenador en:
+
 👉 http://192.168.1.34:8080
