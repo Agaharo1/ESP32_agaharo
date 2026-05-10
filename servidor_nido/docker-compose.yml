@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  receptor_nido:
+    build: .
+    container_name: api_nido
+    ports:
+      - "5000:5000"
+    volumes:
+      # Lado Izquierdo (Tu Ubuntu) : Lado Derecho (El Contenedor)
+      - ./fotos_guardadas:/app/fotos
+    restart: always
