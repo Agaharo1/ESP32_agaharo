@@ -1,4 +1,4 @@
-# 🐣 Proyecto Monitor de Nido
+# Proyecto Monitor de Nido
 
 Este proyecto permite recibir, almacenar y visualizar fotografías capturadas por una **ESP32-CAM** en un servidor local **Ubuntu** utilizando contenedores **Docker**.
 
